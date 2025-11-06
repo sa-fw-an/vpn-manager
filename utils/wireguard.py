@@ -124,29 +124,45 @@ def remove_peer_from_config(public_key):
     with open(config.WIREGUARD_CONFIG_FILE, 'r') as f:
         lines = f.readlines()
     
-    # Find and remove peer section
+    # Parse the file to find peer sections
     new_lines = []
-    skip_section = False
+    i = 0
     
-    for line in lines:
-        if line.strip().startswith('# Peer:'):
-            skip_section = True
-        elif line.strip().startswith('[Peer]') and skip_section:
-            continue
-        elif line.strip().startswith('PublicKey =') and skip_section:
-            if public_key in line:
-                continue
-            else:
-                skip_section = False
-        elif line.strip().startswith('AllowedIPs =') and skip_section:
-            skip_section = False
-            continue
-        elif skip_section and line.strip() == '':
-            skip_section = False
-            continue
+    while i < len(lines):
+        line = lines[i]
         
-        if not skip_section:
+        # Check if this is a peer comment
+        if line.strip().startswith('# Peer:'):
+            # Look ahead to find the peer's public key
+            peer_lines = [line]
+            j = i + 1
+            found_target = False
+            
+            # Collect all lines for this peer section
+            while j < len(lines):
+                peer_lines.append(lines[j])
+                
+                # Check if this peer has the target public key
+                if lines[j].strip().startswith('PublicKey =') and public_key in lines[j]:
+                    found_target = True
+                
+                # End of peer section (blank line or next peer/section)
+                if lines[j].strip() == '' or (j + 1 < len(lines) and lines[j + 1].strip().startswith(('[', '#'))):
+                    j += 1
+                    break
+                
+                j += 1
+            
+            # If this is not the peer we want to remove, keep it
+            if not found_target:
+                new_lines.extend(peer_lines)
+            
+            # Skip past this peer section
+            i = j
+        else:
+            # Keep all non-peer lines (Interface section, etc.)
             new_lines.append(line)
+            i += 1
     
     # Write back
     with open(config.WIREGUARD_CONFIG_FILE, 'w') as f:
