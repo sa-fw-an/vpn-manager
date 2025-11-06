@@ -204,11 +204,13 @@ SUDOEOF
     echo "✓ Sudoers configured"
 fi
 
-# Create systemd service
+# Create systemd service with auto-restart and self-healing
 cat > /etc/systemd/system/vpn-manager.service <<EOF
 [Unit]
 Description=VPN Manager Web Interface
-After=network.target wg-quick@wg0.service
+Documentation=https://github.com/sa-fw-an/vpn-manager
+After=network-online.target wg-quick@wg0.service
+Wants=network-online.target
 Requires=wg-quick@wg0.service
 
 [Service]
@@ -217,8 +219,26 @@ User=root
 WorkingDirectory=$PROJECT_DIR
 Environment="PATH=$PROJECT_DIR/venv/bin"
 ExecStart=$PROJECT_DIR/venv/bin/python $PROJECT_DIR/app.py
+
+# Auto-restart configuration
 Restart=always
 RestartSec=10
+
+# Restart service if it crashes within 30 seconds, max 5 times
+StartLimitInterval=200
+StartLimitBurst=5
+
+# Security and resource limits
+NoNewPrivileges=false
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=vpn-manager
+
+# Watchdog - restart if service becomes unresponsive
+WatchdogSec=60
 
 [Install]
 WantedBy=multi-user.target

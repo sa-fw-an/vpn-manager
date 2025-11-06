@@ -90,8 +90,7 @@ def devices():
     
     return render_template('devices.html', 
                          devices=devices_with_status, 
-                         subnet_info=subnet_info,
-                         wg_installed=wireguard.check_wireguard_installed())
+                         subnet_info=subnet_info)
 
 @app.route('/devices/add', methods=['POST'])
 @login_required
