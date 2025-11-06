@@ -61,3 +61,4 @@ htmlcov/
 
 # Compiled files
 *.pyc
+download-configs.sh
