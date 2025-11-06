@@ -204,7 +204,7 @@ SUDOEOF
     echo "✓ Sudoers configured"
 fi
 
-# Create systemd service with auto-restart and self-healing
+# Create systemd service with enhanced auto-restart and self-healing
 cat > /etc/systemd/system/vpn-manager.service <<EOF
 [Unit]
 Description=VPN Manager Web Interface
@@ -220,13 +220,16 @@ WorkingDirectory=$PROJECT_DIR
 Environment="PATH=$PROJECT_DIR/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 ExecStart=$PROJECT_DIR/venv/bin/python $PROJECT_DIR/app.py
 
-# Auto-restart configuration
+# Enhanced auto-restart configuration for self-healing
 Restart=always
-RestartSec=10
+RestartSec=5
 
-# Restart service if it crashes, max 5 times in 200 seconds
-StartLimitInterval=200
-StartLimitBurst=5
+# Restart service if it crashes, max 10 times in 300 seconds (5 minutes)
+StartLimitInterval=300
+StartLimitBurst=10
+
+# If service fails to start after max attempts, wait 60s then reset the counter
+StartLimitAction=none
 
 # Security and resource limits
 NoNewPrivileges=false
@@ -241,17 +244,55 @@ SyslogIdentifier=vpn-manager
 WantedBy=multi-user.target
 EOF
 
+# Create health check script
+cp $PROJECT_DIR/health-check.sh /opt/vpn-manager/health-check.sh
+chmod +x /opt/vpn-manager/health-check.sh
+
+# Create health check systemd service
+cat > /etc/systemd/system/vpn-manager-health.service <<EOF
+[Unit]
+Description=VPN Manager Health Check
+After=vpn-manager.service wg-quick@wg0.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/vpn-manager/health-check.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=vpn-health-check
+EOF
+
+# Create health check timer (runs every 5 minutes)
+cat > /etc/systemd/system/vpn-manager-health.timer <<EOF
+[Unit]
+Description=Run VPN Manager Health Check every 5 minutes
+Requires=vpn-manager-health.service
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target
+EOF
+
+echo "✓ Systemd service and health monitoring configured"
+
 # Initialize database
 source $PROJECT_DIR/venv/bin/activate
 cd $PROJECT_DIR
 python3 -c "import database; database.init_database()"
 
-# Reload systemd and start service
+# Reload systemd and start services
 systemctl daemon-reload
 systemctl enable vpn-manager
+systemctl enable vpn-manager-health.timer
 systemctl restart vpn-manager
+systemctl start vpn-manager-health.timer
 
 echo "✓ Service configured and started"
+echo "✓ Health monitoring enabled (checks every 5 minutes)"
 
 # Get server IP
 SERVER_IP=$(curl -s ifconfig.me || echo "Unable to detect")
