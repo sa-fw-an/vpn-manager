@@ -248,7 +248,8 @@ def get_peer_status():
             public_key = parts[0]
             handshake_timestamp = parts[4]
             
-            # Check if handshake is recent (within last 3 minutes)
+            # Check if handshake is recent (within last 3 keepalive intervals)
+            # WireGuard keepalive is 25 seconds, so 90 seconds = 3 missed keepalives
             online = False
             handshake_time = None
             
@@ -256,7 +257,7 @@ def get_peer_status():
                 try:
                     handshake_time = datetime.fromtimestamp(int(handshake_timestamp))
                     time_diff = (datetime.now() - handshake_time).total_seconds()
-                    online = time_diff < 180  # 3 minutes
+                    online = time_diff < 90  # 90 seconds (3.5 keepalive intervals)
                 except:
                     pass
             
