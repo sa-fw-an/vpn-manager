@@ -217,14 +217,14 @@ Requires=wg-quick@wg0.service
 Type=simple
 User=root
 WorkingDirectory=$PROJECT_DIR
-Environment="PATH=$PROJECT_DIR/venv/bin"
+Environment="PATH=$PROJECT_DIR/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 ExecStart=$PROJECT_DIR/venv/bin/python $PROJECT_DIR/app.py
 
 # Auto-restart configuration
 Restart=always
 RestartSec=10
 
-# Restart service if it crashes within 30 seconds, max 5 times
+# Restart service if it crashes, max 5 times in 200 seconds
 StartLimitInterval=200
 StartLimitBurst=5
 
@@ -236,9 +236,6 @@ PrivateTmp=true
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=vpn-manager
-
-# Watchdog - restart if service becomes unresponsive
-WatchdogSec=60
 
 [Install]
 WantedBy=multi-user.target
