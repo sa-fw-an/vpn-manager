@@ -210,8 +210,7 @@ cat > /etc/systemd/system/vpn-manager.service <<EOF
 Description=VPN Manager Web Interface
 Documentation=https://github.com/sa-fw-an/vpn-manager
 After=network-online.target wg-quick@wg0.service
-Wants=network-online.target
-Requires=wg-quick@wg0.service
+Wants=network-online.target wg-quick@wg0.service
 
 [Service]
 Type=simple
