@@ -23,7 +23,7 @@
         {% endif %}
         
         <form method="POST" action="{{ url_for('add_port_forward') }}" id="addForwardForm">
-            <div class="row g-3 align-items-end">
+            <div class="row g-3">
                 <div class="col-md-3">
                     <label for="device_id" class="form-label">Target Device *</label>
                     <select class="form-select" id="device_id" name="device_id" required {% if not devices %}disabled{% endif %}>
@@ -32,17 +32,19 @@
                         <option value="{{ device.id }}">{{ device.name }} ({{ device.vpn_ip }})</option>
                         {% endfor %}
                     </select>
+                    <small class="form-text d-block" style="min-height: 1.25rem;">&nbsp;</small>
                 </div>
                 <div class="col-md-2">
                     <label for="public_port" class="form-label">Public Port *</label>
                     <input type="number" class="form-control" id="public_port" name="public_port" 
                            min="1024" max="65535" placeholder="e.g., 8000" required>
-                    <small class="form-text text-muted">1024-65535</small>
+                    <small class="form-text text-muted d-block" style="min-height: 1.25rem;">1024-65535</small>
                 </div>
                 <div class="col-md-2">
                     <label for="target_port" class="form-label">Target Port *</label>
                     <input type="number" class="form-control" id="target_port" name="target_port" 
                            min="1" max="65535" placeholder="e.g., 22" required>
+                    <small class="form-text d-block" style="min-height: 1.25rem;">&nbsp;</small>
                 </div>
                 <div class="col-md-2">
                     <label for="protocol" class="form-label">Protocol *</label>
@@ -51,8 +53,10 @@
                         <option value="udp">UDP</option>
                         <option value="both">Both</option>
                     </select>
+                    <small class="form-text d-block" style="min-height: 1.25rem;">&nbsp;</small>
                 </div>
                 <div class="col-md-3">
+                    <label class="form-label d-block" style="visibility: hidden;">Action</label>
                     <button type="submit" class="btn btn-success w-100" {% if not devices %}disabled{% endif %}>
                         <i class="bi bi-plus-lg"></i> Add Forward
                     </button>
@@ -124,15 +128,13 @@
                             <small>{{ forward.created_at }}</small>
                         </td>
                         <td>
-                            <div class="btn-group btn-group-sm">
-                                <button class="btn btn-danger delete-forward" 
-                                        data-forward-id="{{ forward.id }}"
-                                        data-port="{{ forward.public_port }}"
-                                        data-protocol="{{ forward.protocol|upper }}"
-                                        title="Delete Forward">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
+                            <button class="btn btn-sm btn-outline-danger delete-forward" 
+                                    data-forward-id="{{ forward.id }}"
+                                    data-port="{{ forward.public_port }}"
+                                    data-protocol="{{ forward.protocol|upper }}"
+                                    title="Delete Forward">
+                                <i class="bi bi-trash"></i>
+                            </button>
                         </td>
                     </tr>
                     {% endfor %}

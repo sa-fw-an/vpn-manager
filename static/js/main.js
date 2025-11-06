@@ -1,5 +1,40 @@
 // Main JavaScript for VPN Manager
 
+// Theme toggle functionality
+function initThemeToggle() {
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const html = document.documentElement;
+    
+    if (!themeToggle) return;
+    
+    // Update icon based on current theme
+    function updateIcon() {
+        const currentTheme = html.getAttribute('data-bs-theme');
+        if (currentTheme === 'dark') {
+            themeIcon.className = 'bi bi-sun-fill';
+        } else {
+            themeIcon.className = 'bi bi-moon-fill';
+        }
+    }
+    
+    // Initialize icon
+    updateIcon();
+    
+    // Toggle theme on button click
+    themeToggle.addEventListener('click', function() {
+        const currentTheme = html.getAttribute('data-bs-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        html.setAttribute('data-bs-theme', newTheme);
+        localStorage.setItem('vpn-theme', newTheme);
+        updateIcon();
+    });
+}
+
+// Initialize theme toggle immediately
+initThemeToggle();
+
 $(document).ready(function() {
     console.log('VPN Manager initialized');
     
