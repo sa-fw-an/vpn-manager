@@ -48,7 +48,11 @@
                 <i class="bi bi-x-circle"></i> WireGuard is not running
             </div>
             <p>Run the setup script to configure WireGuard:</p>
+            {% if platform == 'macOS' %}
             <code>sudo bash setup_mac.sh</code>
+            {% else %}
+            <code>sudo bash setup_ubuntu_server.sh</code>
+            {% endif %}
         {% endif %}
     </div>
 </div>
@@ -86,6 +90,7 @@
         <h5 class="mb-0"><i class="bi bi-book"></i> Quick Setup Guide</h5>
     </div>
     <div class="card-body">
+        {% if platform == 'macOS' %}
         <h6>macOS Setup:</h6>
         <ol>
             <li>Run the setup script: <code>sudo bash setup_mac.sh</code></li>
@@ -93,11 +98,25 @@
             <li>Download or scan the QR code to configure your client</li>
             <li>Add port forwards as needed</li>
         </ol>
-        
-        <h6 class="mt-4">Ubuntu Deployment:</h6>
+        {% else %}
+        <h6>Linux/Ubuntu Setup:</h6>
         <ol>
+            <li>Run: <code>sudo bash setup_ubuntu_server.sh</code></li>
+            <li>Service will start automatically</li>
+            <li>Access web interface on port 5001</li>
+            <li>Add devices and configure port forwarding</li>
+        </ol>
+        {% endif %}
+        
+        <h6 class="mt-4">{% if platform == 'macOS' %}Ubuntu Deployment{% else %}macOS Setup{% endif %}:</h6>
+        <ol>
+            {% if platform == 'macOS' %}
             <li>Copy files to your server</li>
             <li>Run: <code>sudo bash setup_ubuntu_server.sh</code></li>
+            {% else %}
+            <li>Run the setup script: <code>sudo bash setup_mac.sh</code></li>
+            <li>Configure client devices</li>
+            {% endif %}
             <li>Access the web interface on port 5001</li>
         </ol>
         

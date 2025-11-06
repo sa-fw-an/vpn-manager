@@ -41,17 +41,8 @@ echo "✓ System updated"
 # 2. Install dependencies
 echo ""
 echo "[2/10] Installing dependencies..."
-apt install -y \
-    wireguard \
-    python3 \
-    python3-pip \
-    python3-venv \
-    iptables-persistent \
-    qrencode \
-    curl \
-    git \
-    ufw
-
+# Install packages separately to avoid conflicts
+apt install -y wireguard python3-pip python3-venv qrencode net-tools curl git
 echo "✓ Dependencies installed"
 
 # 3. Enable IP forwarding
@@ -82,7 +73,8 @@ echo "[5/10] Setting up Python environment..."
 python3 -m venv $PROJECT_DIR/venv
 source $PROJECT_DIR/venv/bin/activate
 pip install --upgrade pip
-pip install -r $PROJECT_DIR/requirements.txt
+# Install packages individually to handle version conflicts
+pip install Flask==3.0.0 Flask-Login==0.6.3 qrcode==7.4.2 Pillow python-dotenv
 echo "✓ Python environment configured"
 
 # 6. Generate WireGuard server keys
@@ -130,36 +122,94 @@ systemctl enable wg-quick@wg0
 systemctl restart wg-quick@wg0
 echo "✓ WireGuard started"
 
-# 9. Configure UFW firewall
+# 9. Configure firewall
 echo ""
 echo "[9/10] Configuring firewall..."
 
-# Allow SSH (important!)
-ufw allow 22/tcp
+# Check if ufw is installed, if not skip
+if command -v ufw &> /dev/null; then
+    # Allow SSH (important!)
+    ufw allow 22/tcp
+    
+    # Allow WireGuard
+    ufw allow 51820/udp
+    
+    # Allow web interface
+    ufw allow 5001/tcp
+    
+    # Enable UFW
+    ufw --force enable
+    
+    echo "✓ UFW firewall configured"
+else
+    echo "✓ UFW not available, skipping firewall configuration"
+    echo "  (iptables rules in WireGuard config will handle forwarding)"
+fi
 
-# Allow WireGuard
-ufw allow 51820/udp
-
-# Allow web interface
-ufw allow 5001/tcp
-
-# Allow port forwarding range
-ufw allow 1024:65535/tcp
-ufw allow 1024:65535/udp
-
-# Enable UFW
-ufw --force enable
-
-echo "✓ Firewall configured"
-
-# 10. Create systemd service for web app
+# 10. Create .env file if not exists and set up service
 echo ""
-echo "[10/10] Creating systemd service..."
+echo "[10/10] Configuring service..."
 
+# Create .env file if it doesn't exist
+if [ ! -f "$PROJECT_DIR/.env" ]; then
+    echo "Creating .env file..."
+    SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))')
+    cat > $PROJECT_DIR/.env <<ENVEOF
+# Flask Configuration
+SECRET_KEY=$SECRET_KEY
+DEBUG=False
+FLASK_PORT=5001
+
+# Authentication
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=ChangeThisPassword!
+
+# VPN Network Configuration
+VPN_SUBNET=10.0.0.0/24
+VPN_SERVER_IP=10.0.0.1
+VPN_START_IP=10.0.0.2
+WIREGUARD_PORT=51820
+WIREGUARD_INTERFACE=wg0
+
+# WireGuard Paths
+WIREGUARD_CONFIG_DIR=/etc/wireguard
+
+# Public Network Interface
+PUBLIC_INTERFACE=eth0
+
+# Port Forwarding Configuration
+MIN_PUBLIC_PORT=1024
+MAX_PUBLIC_PORT=65535
+
+# Session Configuration
+SESSION_TIMEOUT_HOURS=24
+
+# Database Path
+DATABASE_PATH=$PROJECT_DIR/database.db
+ENVEOF
+    echo "✓ .env file created"
+else
+    echo "✓ Using existing .env file"
+fi
+
+# Configure sudoers for password-less WireGuard commands
+if [ ! -f /etc/sudoers.d/wireguard-vpn-manager ]; then
+    cat > /etc/sudoers.d/wireguard-vpn-manager <<SUDOEOF
+# Allow root to run WireGuard commands without password
+root ALL=(ALL) NOPASSWD: /usr/bin/wg
+root ALL=(ALL) NOPASSWD: /usr/bin/wg-quick
+root ALL=(ALL) NOPASSWD: /usr/sbin/iptables
+SUDOEOF
+    chmod 0440 /etc/sudoers.d/wireguard-vpn-manager
+    echo "✓ Sudoers configured"
+fi
+
+# Create systemd service
 cat > /etc/systemd/system/vpn-manager.service <<EOF
 [Unit]
 Description=VPN Manager Web Interface
 After=network.target wg-quick@wg0.service
+Requires=wg-quick@wg0.service
 
 [Service]
 Type=simple
@@ -177,7 +227,7 @@ EOF
 # Initialize database
 source $PROJECT_DIR/venv/bin/activate
 cd $PROJECT_DIR
-python3 database.py
+python3 -c "import database; database.init_database()"
 
 # Reload systemd and start service
 systemctl daemon-reload
