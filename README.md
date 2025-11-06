@@ -67,8 +67,8 @@ chmod +x setup_mac.sh
 ### Ubuntu Setup
 
 ```bash
-chmod +x deploy_ubuntu.sh
-sudo ./deploy_ubuntu.sh
+chmod +x setup_ubuntu_server.sh
+sudo ./setup_ubuntu_server.sh
 ```
 
 ### Run the Application

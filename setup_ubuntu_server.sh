@@ -20,7 +20,7 @@ fi
 # Check if running as root
 if [[ $EUID -ne 0 ]]; then
    echo "This script must be run as root" 
-   echo "Usage: sudo bash deploy_ubuntu.sh"
+   echo "Usage: sudo bash setup_ubuntu_server.sh"
    exit 1
 fi
 

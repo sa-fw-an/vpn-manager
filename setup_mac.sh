@@ -14,7 +14,7 @@ echo ""
 # Check if running on macOS
 if [[ "$(uname)" != "Darwin" ]]; then
     echo "Error: This script is for macOS only!"
-    echo "For Ubuntu, use deploy_ubuntu.sh"
+    echo "For Ubuntu, use setup_ubuntu_server.sh"
     exit 1
 fi
 
