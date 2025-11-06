@@ -47,27 +47,27 @@
 </div>
 
 <!-- Add Device Form -->
-<div class="card mb-4">
+<div class="card mb-4 shadow-sm">
     <div class="card-header bg-primary text-white">
         <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add New Device</h5>
     </div>
-        <div class="card-body">
+    <div class="card-body">
         <form method="POST" action="{{ url_for('add_device') }}" id="addDeviceForm">
-            <div class="row">
+            <div class="row g-3 align-items-end">
                 <div class="col-md-4">
                     <label for="name" class="form-label">Device Name *</label>
                     <input type="text" class="form-control" id="name" name="name" 
                            placeholder="e.g., iPhone, Laptop" required pattern="[a-zA-Z0-9\-_]+">
                     <small class="text-muted">Alphanumeric, hyphens, and underscores only</small>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-5">
                     <label for="description" class="form-label">Description</label>
                     <input type="text" class="form-control" id="description" name="description" 
                            placeholder="Optional description">
                 </div>
-                <div class="col-md-2 d-flex align-items-end">
+                <div class="col-md-3">
                     <button type="submit" class="btn btn-success w-100">
-                        <i class="bi bi-plus"></i> Add Device
+                        <i class="bi bi-plus-lg"></i> Add Device
                     </button>
                 </div>
             </div>
@@ -76,11 +76,11 @@
 </div>
 
 <!-- Devices List -->
-<div class="card">
-    <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-list"></i> Registered Devices</h5>
+<div class="card shadow-sm">
+    <div class="card-header bg-white">
+        <h5 class="mb-0"><i class="bi bi-list-ul"></i> Registered Devices</h5>
     </div>
-    <div class="card-body">
+    <div class="card-body p-0">
         {% if devices %}
         <div class="table-responsive">
             <table class="table table-hover" id="devicesTable">
@@ -126,16 +126,16 @@
                         </td>
                         <td><small>{{ device.created_at }}</small></td>
                         <td>
-                            <div class="btn-group btn-group-sm">
+                            <div class="btn-group btn-group-sm" role="group">
                                 <a href="{{ url_for('download_device_config', device_id=device.id) }}" 
-                                   class="btn btn-primary" title="Download Config">
+                                   class="btn btn-outline-primary" title="Download Config">
                                     <i class="bi bi-download"></i>
                                 </a>
-                                <button class="btn btn-info show-qr" data-device-id="{{ device.id }}" 
+                                <button class="btn btn-outline-info show-qr" data-device-id="{{ device.id }}" 
                                         title="Show QR Code">
                                     <i class="bi bi-qr-code"></i>
                                 </button>
-                                <button class="btn btn-danger delete-device" 
+                                <button class="btn btn-outline-danger delete-device" 
                                         data-device-id="{{ device.id }}" 
                                         data-device-name="{{ device.name }}"
                                         title="Delete Device">
@@ -149,8 +149,8 @@
             </table>
         </div>
         
-        <div class="text-muted mt-2">
-            <small><i class="bi bi-info-circle"></i> Device status refreshes every 10 seconds</small>
+        <div class="px-3 py-2 bg-light border-top">
+            <small class="text-muted"><i class="bi bi-info-circle"></i> Device status refreshes every 10 seconds</small>
         </div>
         {% else %}
         <div class="text-center text-muted py-4">

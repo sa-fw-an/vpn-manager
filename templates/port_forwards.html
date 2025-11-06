@@ -11,19 +11,19 @@
 </div>
 
 <!-- Add Port Forward Form -->
-<div class="card mb-4">
+<div class="card mb-4 shadow-sm">
     <div class="card-header bg-primary text-white">
         <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add Port Forward</h5>
     </div>
     <div class="card-body">
         {% if not devices %}
-        <div class="alert alert-warning">
+        <div class="alert alert-warning mb-3">
             <i class="bi bi-exclamation-triangle"></i> No devices available. Please add a VPN device first.
         </div>
         {% endif %}
         
         <form method="POST" action="{{ url_for('add_port_forward') }}" id="addForwardForm">
-            <div class="row">
+            <div class="row g-3 align-items-end">
                 <div class="col-md-3">
                     <label for="device_id" class="form-label">Target Device *</label>
                     <select class="form-select" id="device_id" name="device_id" required {% if not devices %}disabled{% endif %}>
@@ -37,7 +37,7 @@
                     <label for="public_port" class="form-label">Public Port *</label>
                     <input type="number" class="form-control" id="public_port" name="public_port" 
                            min="1024" max="65535" placeholder="e.g., 8000" required>
-                    <small class="text-muted">1024-65535</small>
+                    <small class="form-text text-muted">1024-65535</small>
                 </div>
                 <div class="col-md-2">
                     <label for="target_port" class="form-label">Target Port *</label>
@@ -52,30 +52,30 @@
                         <option value="both">Both</option>
                     </select>
                 </div>
-                <div class="col-md-3 d-flex align-items-end">
+                <div class="col-md-3">
                     <button type="submit" class="btn btn-success w-100" {% if not devices %}disabled{% endif %}>
-                        <i class="bi bi-plus"></i> Add Forward
+                        <i class="bi bi-plus-lg"></i> Add Forward
                     </button>
                 </div>
             </div>
+            
+            <div class="alert alert-info mt-3 mb-0">
+                <small>
+                    <i class="bi bi-info-circle"></i> 
+                    <strong>How it works:</strong> Traffic to your public IP on the specified port will be forwarded to the target device.
+                    Both DNAT (destination) and SNAT (source masquerade) are applied for proper bidirectional communication.
+                </small>
+            </div>
         </form>
-        
-        <div class="mt-3">
-            <small class="text-muted">
-                <i class="bi bi-info-circle"></i> 
-                <strong>How it works:</strong> Traffic to your public IP on the specified port will be forwarded to the target device.
-                Both DNAT (destination) and SNAT (source masquerade) are applied for proper bidirectional communication.
-            </small>
-        </div>
     </div>
 </div>
 
 <!-- Port Forwards List -->
-<div class="card">
-    <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-list"></i> Active Port Forwards</h5>
+<div class="card shadow-sm">
+    <div class="card-header bg-white">
+        <h5 class="mb-0"><i class="bi bi-list-ul"></i> Active Port Forwards</h5>
     </div>
-    <div class="card-body">
+    <div class="card-body p-0">
         {% if forwards %}
         <div class="table-responsive">
             <table class="table table-hover">
