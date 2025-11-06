@@ -239,7 +239,7 @@ def get_peer_status():
             if handshake_timestamp != '0':
                 try:
                     handshake_time = datetime.fromtimestamp(int(handshake_timestamp))
-                    time_diff = (datetime.now() - handshake_time).seconds
+                    time_diff = (datetime.now() - handshake_time).total_seconds()
                     online = time_diff < 180  # 3 minutes
                 except:
                     pass
