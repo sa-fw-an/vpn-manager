@@ -179,28 +179,44 @@ def reload_wireguard():
     if not actual_interface:
         return True
     
-    if config.IS_MACOS:
-        # On macOS, wg syncconf requires stripped config (without [Interface])
-        # Use wg-quick strip to generate it, then apply with syncconf
-        strip_cmd = f"wg-quick strip {config.WIREGUARD_CONFIG_FILE} 2>/dev/null"
-        stripped_config, code = run_command(strip_cmd, check=False)
-        
-        if code == 0 and stripped_config:
-            # Apply the stripped config
-            import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.conf') as tf:
-                tf.write(stripped_config)
-                temp_path = tf.name
-            
-            sync_cmd = f"sudo -n wg syncconf {actual_interface} {temp_path} 2>/dev/null"
-            run_command(sync_cmd, check=False)
-            os.unlink(temp_path)
-    else:
-        # On Linux, use wg-quick strip in a subshell
-        cmd = f"sudo -n wg syncconf {interface} <(wg-quick strip {config.WIREGUARD_CONFIG_FILE}) 2>/dev/null"
-        run_command(cmd, check=False)
+    # Strip the config file (remove [Interface] section for syncconf)
+    strip_cmd = f"wg-quick strip {config.WIREGUARD_CONFIG_FILE}"
+    stripped_config, code = run_command(strip_cmd, check=False)
     
-    # Always return True - config is saved to file
+    if code != 0 or not stripped_config:
+        # Strip failed, try full restart as fallback
+        if config.IS_MACOS:
+            restart_cmd = f"sudo -n wg-quick down {interface} 2>/dev/null; sudo -n wg-quick up {config.WIREGUARD_CONFIG_FILE} 2>/dev/null"
+        else:
+            restart_cmd = f"sudo -n systemctl restart wg-quick@{interface} 2>/dev/null"
+        run_command(restart_cmd, check=False)
+        return True
+    
+    # Apply the stripped config using a temp file
+    import tempfile
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.conf') as tf:
+            tf.write(stripped_config)
+            temp_path = tf.name
+        
+        # Use actual_interface for macOS, interface for Linux
+        target_interface = actual_interface if config.IS_MACOS else interface
+        sync_cmd = f"sudo -n wg syncconf {target_interface} {temp_path}"
+        output, code = run_command(sync_cmd, check=False)
+        
+        os.unlink(temp_path)
+        
+        # If syncconf failed, try full restart
+        if code != 0:
+            if config.IS_MACOS:
+                restart_cmd = f"sudo -n wg-quick down {interface} 2>/dev/null; sudo -n wg-quick up {config.WIREGUARD_CONFIG_FILE} 2>/dev/null"
+            else:
+                restart_cmd = f"sudo -n systemctl restart wg-quick@{interface}"
+            run_command(restart_cmd, check=False)
+    except Exception as e:
+        # If anything fails, at least config is saved to file
+        pass
+    
     return True
 
 def get_peer_status():
