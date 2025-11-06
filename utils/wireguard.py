@@ -63,13 +63,21 @@ def get_server_public_key():
 
 def get_server_endpoint():
     """Get server endpoint (IP:Port)"""
-    # For local testing, use local IP
+    # For local testing on macOS, use local IP
     if config.IS_MACOS:
         # Try to get local IP
         cmd = "ipconfig getifaddr en0 || ipconfig getifaddr en1"
         local_ip, code = run_command(cmd, check=False)
         if code == 0 and local_ip:
             return f"{local_ip}:{config.WIREGUARD_PORT}"
+    
+    # For Linux servers, try to get public IP
+    if config.IS_LINUX:
+        # Try to get public IP from external service
+        cmd = "curl -s ifconfig.me || curl -s icanhazip.com || curl -s ipecho.net/plain"
+        public_ip, code = run_command(cmd, check=False)
+        if code == 0 and public_ip and public_ip != "":
+            return f"{public_ip}:{config.WIREGUARD_PORT}"
     
     # Fallback to localhost for testing
     return f"127.0.0.1:{config.WIREGUARD_PORT}"
