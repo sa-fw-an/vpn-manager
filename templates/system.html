@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}System Info - VPN Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="bi bi-info-circle"></i> System Information</h2>
+        <p class="text-muted">VPN server status and configuration</p>
+    </div>
+</div>
+
+<!-- Platform Info -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-laptop"></i> Platform</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <strong>Operating System:</strong> {{ platform }}
+            </div>
+            <div class="col-md-6">
+                <strong>Firewall Configured:</strong> 
+                {% if fw_configured %}
+                    <span class="badge bg-success">Yes</span>
+                {% else %}
+                    <span class="badge bg-warning">No</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- WireGuard Status -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-shield-lock"></i> WireGuard Status</h5>
+    </div>
+    <div class="card-body">
+        {% if wg_status.running %}
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle"></i> WireGuard is running
+            </div>
+            <pre class="bg-light p-3 rounded"><code>{{ wg_status.output }}</code></pre>
+        {% else %}
+            <div class="alert alert-danger">
+                <i class="bi bi-x-circle"></i> WireGuard is not running
+            </div>
+            <p>Run the setup script to configure WireGuard:</p>
+            <code>sudo bash setup_mac.sh</code>
+        {% endif %}
+    </div>
+</div>
+
+<!-- VPN Subnet Info -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-diagram-3"></i> VPN Network</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <strong>Subnet:</strong><br>
+                <code>{{ subnet_info.subnet }}</code>
+            </div>
+            <div class="col-md-3">
+                <strong>Server IP:</strong><br>
+                <code>{{ subnet_info.server_ip }}</code>
+            </div>
+            <div class="col-md-3">
+                <strong>Allocated IPs:</strong><br>
+                <code>{{ subnet_info.allocated }} / {{ subnet_info.total_ips }}</code>
+            </div>
+            <div class="col-md-3">
+                <strong>Available IPs:</strong><br>
+                <code>{{ subnet_info.available }}</code>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Setup Guide -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-book"></i> Quick Setup Guide</h5>
+    </div>
+    <div class="card-body">
+        <h6>macOS Setup:</h6>
+        <ol>
+            <li>Run the setup script: <code>sudo bash setup_mac.sh</code></li>
+            <li>Add a device from the Devices page</li>
+            <li>Download or scan the QR code to configure your client</li>
+            <li>Add port forwards as needed</li>
+        </ol>
+        
+        <h6 class="mt-4">Ubuntu Deployment:</h6>
+        <ol>
+            <li>Copy files to your server</li>
+            <li>Run: <code>sudo bash deploy_ubuntu.sh</code></li>
+            <li>Access the web interface on port 5001</li>
+        </ol>
+        
+        <h6 class="mt-4">Testing Port Forwards:</h6>
+        <ul>
+            <li><strong>TCP:</strong> <code>telnet localhost &lt;port&gt;</code></li>
+            <li><strong>UDP:</strong> <code>nc -u localhost &lt;port&gt;</code></li>
+            <li><strong>SSH:</strong> <code>ssh -p &lt;port&gt; user@localhost</code></li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

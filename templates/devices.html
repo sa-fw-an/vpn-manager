@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}Devices - VPN Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="bi bi-phone"></i> VPN Devices</h2>
+        <p class="text-muted">Manage WireGuard VPN clients and configurations</p>
+    </div>
+</div>
+
+<!-- Subnet Info Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">VPN Subnet</h6>
+                <h4>{{ subnet_info.subnet }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Server IP</h6>
+                <h4>{{ subnet_info.server_ip }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Allocated IPs</h6>
+                <h4>{{ subnet_info.allocated }} / {{ subnet_info.total_ips }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Available IPs</h6>
+                <h4>{{ subnet_info.available }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Device Form -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add New Device</h5>
+    </div>
+    <div class="card-body">
+        {% if not wg_installed %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i> WireGuard is not installed. Please run <code>setup_mac.sh</code> first.
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="{{ url_for('add_device') }}" id="addDeviceForm">
+            <div class="row">
+                <div class="col-md-4">
+                    <label for="name" class="form-label">Device Name *</label>
+                    <input type="text" class="form-control" id="name" name="name" 
+                           placeholder="e.g., iPhone, Laptop" required pattern="[a-zA-Z0-9\-_]+">
+                    <small class="text-muted">Alphanumeric, hyphens, and underscores only</small>
+                </div>
+                <div class="col-md-6">
+                    <label for="description" class="form-label">Description</label>
+                    <input type="text" class="form-control" id="description" name="description" 
+                           placeholder="Optional description">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-success w-100" {% if not wg_installed %}disabled{% endif %}>
+                        <i class="bi bi-plus"></i> Add Device
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Devices List -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-list"></i> Registered Devices</h5>
+    </div>
+    <div class="card-body">
+        {% if devices %}
+        <div class="table-responsive">
+            <table class="table table-hover" id="devicesTable">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Name</th>
+                        <th>VPN IP</th>
+                        <th>Public Key</th>
+                        <th>Last Handshake</th>
+                        <th>Added</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for device in devices %}
+                    <tr data-device-id="{{ device.id }}">
+                        <td>
+                            <span class="badge device-status" data-online="{{ device.online|lower }}">
+                                {% if device.online %}
+                                    <i class="bi bi-circle-fill text-success"></i> Online
+                                {% else %}
+                                    <i class="bi bi-circle-fill text-secondary"></i> Offline
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <strong>{{ device.name }}</strong><br>
+                            <small class="text-muted">{{ device.description or 'No description' }}</small>
+                        </td>
+                        <td><code>{{ device.vpn_ip }}</code></td>
+                        <td>
+                            <code class="small" title="{{ device.public_key }}">
+                                {{ device.public_key[:20] }}...
+                            </code>
+                        </td>
+                        <td class="last-handshake">
+                            {% if device.last_handshake %}
+                                <small>{{ device.last_handshake.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                            {% else %}
+                                <small class="text-muted">Never</small>
+                            {% endif %}
+                        </td>
+                        <td><small>{{ device.created_at }}</small></td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('download_device_config', device_id=device.id) }}" 
+                                   class="btn btn-primary" title="Download Config">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                <button class="btn btn-info show-qr" data-device-id="{{ device.id }}" 
+                                        title="Show QR Code">
+                                    <i class="bi bi-qr-code"></i>
+                                </button>
+                                <button class="btn btn-danger delete-device" 
+                                        data-device-id="{{ device.id }}" 
+                                        data-device-name="{{ device.name }}"
+                                        title="Delete Device">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="text-muted mt-2">
+            <small><i class="bi bi-info-circle"></i> Device status refreshes every 10 seconds</small>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+            <p class="mt-3">No devices registered yet. Add your first device above!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- QR Code Modal -->
+<div class="modal fade" id="qrModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-qr-code"></i> QR Code - <span id="qrDeviceName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="qrCodeContainer">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <p class="mt-3 text-muted">
+                    <small>Scan this QR code with the WireGuard mobile app</small>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete device <strong id="deleteDeviceName"></strong>?</p>
+                <p class="text-danger">This will also remove all associated port forwards!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" id="deleteForm" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh device status every 10 seconds
+    setInterval(refreshDeviceStatus, 10000);
+    
+    function refreshDeviceStatus() {
+        $.get('{{ url_for("devices_status") }}', function(data) {
+            data.forEach(function(device) {
+                const row = $(`tr[data-device-id="${device.id}"]`);
+                const statusBadge = row.find('.device-status');
+                
+                if (device.online) {
+                    statusBadge.html('<i class="bi bi-circle-fill text-success"></i> Online');
+                    statusBadge.attr('data-online', 'true');
+                } else {
+                    statusBadge.html('<i class="bi bi-circle-fill text-secondary"></i> Offline');
+                    statusBadge.attr('data-online', 'false');
+                }
+                
+                if (device.last_handshake) {
+                    const date = new Date(device.last_handshake);
+                    row.find('.last-handshake').html(`<small>${date.toLocaleString()}</small>`);
+                }
+            });
+        });
+    }
+    
+    // Show QR Code
+    $('.show-qr').click(function() {
+        const deviceId = $(this).data('device-id');
+        const deviceName = $(this).closest('tr').find('strong').text();
+        
+        $('#qrDeviceName').text(deviceName);
+        $('#qrCodeContainer').html('<div class="spinner-border text-primary" role="status"></div>');
+        $('#qrModal').modal('show');
+        
+        $.get(`/devices/${deviceId}/qr`, function(data) {
+            $('#qrCodeContainer').html(`<img src="${data.qr_code}" class="img-fluid">`);
+        }).fail(function() {
+            $('#qrCodeContainer').html('<p class="text-danger">Error generating QR code</p>');
+        });
+    });
+    
+    // Delete Device
+    $('.delete-device').click(function() {
+        const deviceId = $(this).data('device-id');
+        const deviceName = $(this).data('device-name');
+        
+        $('#deleteDeviceName').text(deviceName);
+        $('#deleteForm').attr('action', `/devices/${deviceId}/delete`);
+        $('#deleteModal').modal('show');
+    });
+</script>
+{% endblock %}

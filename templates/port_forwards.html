@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}Port Forwards - VPN Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="bi bi-arrow-left-right"></i> Port Forwarding</h2>
+        <p class="text-muted">Manage port forwards to VPN devices (DNAT + SNAT)</p>
+    </div>
+</div>
+
+<!-- Add Port Forward Form -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add Port Forward</h5>
+    </div>
+    <div class="card-body">
+        {% if not devices %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i> No devices available. Please add a VPN device first.
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="{{ url_for('add_port_forward') }}" id="addForwardForm">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="device_id" class="form-label">Target Device *</label>
+                    <select class="form-select" id="device_id" name="device_id" required {% if not devices %}disabled{% endif %}>
+                        <option value="">Select device...</option>
+                        {% for device in devices %}
+                        <option value="{{ device.id }}">{{ device.name }} ({{ device.vpn_ip }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="public_port" class="form-label">Public Port *</label>
+                    <input type="number" class="form-control" id="public_port" name="public_port" 
+                           min="1024" max="65535" placeholder="e.g., 8000" required>
+                    <small class="text-muted">1024-65535</small>
+                </div>
+                <div class="col-md-2">
+                    <label for="target_port" class="form-label">Target Port *</label>
+                    <input type="number" class="form-control" id="target_port" name="target_port" 
+                           min="1" max="65535" placeholder="e.g., 22" required>
+                </div>
+                <div class="col-md-2">
+                    <label for="protocol" class="form-label">Protocol *</label>
+                    <select class="form-select" id="protocol" name="protocol" required>
+                        <option value="tcp">TCP</option>
+                        <option value="udp">UDP</option>
+                        <option value="both">Both</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-success w-100" {% if not devices %}disabled{% endif %}>
+                        <i class="bi bi-plus"></i> Add Forward
+                    </button>
+                </div>
+            </div>
+        </form>
+        
+        <div class="mt-3">
+            <small class="text-muted">
+                <i class="bi bi-info-circle"></i> 
+                <strong>How it works:</strong> Traffic to your public IP on the specified port will be forwarded to the target device.
+                Both DNAT (destination) and SNAT (source masquerade) are applied for proper bidirectional communication.
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- Port Forwards List -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-list"></i> Active Port Forwards</h5>
+    </div>
+    <div class="card-body">
+        {% if forwards %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Public Port</th>
+                        <th>Target Device</th>
+                        <th>Target Port</th>
+                        <th>Protocol</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for forward in forwards %}
+                    <tr class="{% if not forward.enabled %}table-secondary{% endif %}">
+                        <td>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input toggle-forward" type="checkbox" 
+                                       data-forward-id="{{ forward.id }}"
+                                       {% if forward.enabled %}checked{% endif %}>
+                                <label class="form-check-label">
+                                    {% if forward.enabled %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Disabled</span>
+                                    {% endif %}
+                                </label>
+                            </div>
+                        </td>
+                        <td>
+                            <strong><code>{{ forward.public_port }}</code></strong>
+                        </td>
+                        <td>
+                            <strong>{{ forward.device_name }}</strong><br>
+                            <small class="text-muted"><code>{{ forward.device_ip }}</code></small>
+                        </td>
+                        <td>
+                            <code>{{ forward.target_port }}</code>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ forward.protocol|upper }}</span>
+                        </td>
+                        <td>
+                            <small>{{ forward.created_at }}</small>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-danger delete-forward" 
+                                        data-forward-id="{{ forward.id }}"
+                                        data-port="{{ forward.public_port }}"
+                                        data-protocol="{{ forward.protocol|upper }}"
+                                        title="Delete Forward">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="alert alert-info mt-3">
+            <h6><i class="bi bi-terminal"></i> Test Your Port Forwards:</h6>
+            <ul class="mb-0">
+                <li><strong>TCP:</strong> <code>telnet &lt;your-ip&gt; &lt;public-port&gt;</code> or <code>nc -zv &lt;your-ip&gt; &lt;public-port&gt;</code></li>
+                <li><strong>UDP:</strong> <code>nc -u &lt;your-ip&gt; &lt;public-port&gt;</code></li>
+                <li><strong>SSH Example:</strong> <code>ssh -p &lt;public-port&gt; user@&lt;your-ip&gt;</code></li>
+            </ul>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-arrow-left-right" style="font-size: 3rem;"></i>
+            <p class="mt-3">No port forwards configured. Add your first port forward above!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this port forward?</p>
+                <p><strong>Port:</strong> <span id="deletePort"></span> (<span id="deleteProtocol"></span>)</p>
+                <p class="text-warning">Firewall rules will be removed.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" id="deleteForm" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Toggle port forward enable/disable
+    $('.toggle-forward').change(function() {
+        const forwardId = $(this).data('forward-id');
+        const enabled = $(this).is(':checked');
+        const row = $(this).closest('tr');
+        const badge = row.find('.badge');
+        
+        $.post(`/port-forwards/${forwardId}/toggle`, function(data) {
+            if (data.success) {
+                if (data.enabled) {
+                    badge.removeClass('bg-secondary').addClass('bg-success').text('Active');
+                    row.removeClass('table-secondary');
+                } else {
+                    badge.removeClass('bg-success').addClass('bg-secondary').text('Disabled');
+                    row.addClass('table-secondary');
+                }
+                
+                // Show toast notification
+                const toast = $(`
+                    <div class="toast position-fixed top-0 end-0 m-3" role="alert">
+                        <div class="toast-header bg-success text-white">
+                            <strong class="me-auto">Success</strong>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                        </div>
+                        <div class="toast-body">${data.message}</div>
+                    </div>
+                `);
+                $('body').append(toast);
+                const toastInstance = new bootstrap.Toast(toast[0]);
+                toastInstance.show();
+            }
+        }).fail(function() {
+            // Revert toggle on error
+            $(this).prop('checked', !enabled);
+            alert('Error toggling port forward');
+        });
+    });
+    
+    // Delete port forward
+    $('.delete-forward').click(function() {
+        const forwardId = $(this).data('forward-id');
+        const port = $(this).data('port');
+        const protocol = $(this).data('protocol');
+        
+        $('#deletePort').text(port);
+        $('#deleteProtocol').text(protocol);
+        $('#deleteForm').attr('action', `/port-forwards/${forwardId}/delete`);
+        $('#deleteModal').modal('show');
+    });
+</script>
+{% endblock %}
