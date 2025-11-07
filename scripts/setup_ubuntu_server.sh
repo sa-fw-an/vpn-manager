@@ -243,6 +243,23 @@ SyslogIdentifier=vpn-manager
 WantedBy=multi-user.target
 EOF
 
+# Configure journal limits (10MB max, 3 days retention)
+echo "Configuring systemd journal limits..."
+mkdir -p /etc/systemd/journald.conf.d/
+cat > /etc/systemd/journald.conf.d/vpn-manager.conf <<'JOURNALEOF'
+[Journal]
+SystemMaxUse=10M
+SystemKeepFree=50M
+SystemMaxFileSize=2M
+MaxRetentionSec=3d
+Compress=yes
+ForwardToSyslog=no
+JOURNALEOF
+systemctl restart systemd-journald
+journalctl --vacuum-size=10M
+journalctl --vacuum-time=3d
+echo "✓ Journal limits configured (10MB max, 3 days retention)"
+
 # Create health check script
 cp $PROJECT_DIR/health-check.sh /opt/vpn-manager/health-check.sh
 chmod +x /opt/vpn-manager/health-check.sh

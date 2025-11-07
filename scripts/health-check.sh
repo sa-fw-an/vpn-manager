@@ -3,9 +3,38 @@
 # This script monitors the health of VPN services and auto-heals if needed
 
 LOG_FILE="/var/log/vpn-manager-health.log"
+LOG_MAX_AGE_DAYS=3
 
 log() {
     echo "$(date "+%Y-%m-%d %H:%M:%S") - $1" | tee -a "$LOG_FILE"
+}
+
+# Cleanup old logs (delete entries older than 3 days)
+cleanup_logs() {
+    if [ -f "$LOG_FILE" ]; then
+        # Get date 3 days ago in epoch
+        three_days_ago=$(date -d "3 days ago" +%s 2>/dev/null || date -v-3d +%s)
+        
+        # Create temporary file for new logs
+        temp_log="/tmp/vpn-health-clean.log"
+        
+        # Keep only logs from last 3 days
+        while IFS= read -r line; do
+            log_date=$(echo "$line" | grep -oP '^\d{4}-\d{2}-\d{2}' || echo "")
+            if [ -n "$log_date" ]; then
+                log_epoch=$(date -d "$log_date" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "$log_date" +%s 2>/dev/null)
+                if [ "$log_epoch" -ge "$three_days_ago" ]; then
+                    echo "$line" >> "$temp_log"
+                fi
+            fi
+        done < "$LOG_FILE"
+        
+        # Replace old log with cleaned version
+        if [ -f "$temp_log" ]; then
+            mv "$temp_log" "$LOG_FILE"
+            chmod 644 "$LOG_FILE"
+        fi
+    fi
 }
 
 # Check if VPN Manager service is running
@@ -89,6 +118,9 @@ check_firewall() {
 
 # Main health check
 main() {
+    # Cleanup old logs first
+    cleanup_logs
+    
     # Run all checks
     check_vpn_manager
     check_wireguard
